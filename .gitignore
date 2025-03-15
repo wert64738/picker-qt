@@ -36,3 +36,4 @@ moc_*
 *.moc
 picker-qt
 *.stash
+Makefile
