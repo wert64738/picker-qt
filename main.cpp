@@ -17,6 +17,7 @@
 #include <QString>
 #include <QColor>
 #include <QFont>
+#include <QPen>
 
 // Constants
 constexpr int CAPTURE_SIZE      = 11;
@@ -28,7 +29,7 @@ constexpr int RECT_Y            = 18 * SCALE_FACTOR;
 constexpr int RECT_WIDTH        = 3  * SCALE_FACTOR;
 constexpr int RECT_HEIGHT       = 3  * SCALE_FACTOR;
 constexpr int OVERALL_WIDTH     = VIEW_SIZE * 2 + 40;
-constexpr int OVERALL_HEIGHT    = VIEW_SIZE + 140; // Increased height for extra spacing
+constexpr int OVERALL_HEIGHT    = VIEW_SIZE + 140; // Extra spacing for text fields
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -63,7 +64,7 @@ public:
         mainLayout->addLayout(topLayout);
         
         // Extra spacing to ensure text fields don't overlap the view boxes.
-        mainLayout->addSpacing(VIEW_SIZE);
+        mainLayout->addSpacing(20);
         
         // Form layout for text fields.
         QFormLayout* formLayout = new QFormLayout();
@@ -155,9 +156,14 @@ public slots:
                                         VIEW_SIZE,
                                         Qt::KeepAspectRatio,
                                         Qt::FastTransformation);
+        // Fix red square alignment: disable antialiasing, use cosmetic pen, and offset by 0.5 pixels.
         QPainter painter(&zoomed);
-        painter.setPen(Qt::red);
-        painter.drawRect(RECT_X, RECT_Y, RECT_WIDTH, RECT_HEIGHT);
+        painter.setRenderHint(QPainter::Antialiasing, false);
+        QPen pen(Qt::red);
+        pen.setWidth(2);
+        pen.setCosmetic(true);
+        painter.setPen(pen);
+        painter.drawRect(RECT_X + 10.0, RECT_Y + 10.0, RECT_WIDTH + 2.0, RECT_HEIGHT + 2.0);
         
         imageLabel->setPixmap(zoomed);
         
