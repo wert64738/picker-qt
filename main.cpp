@@ -18,14 +18,25 @@
 #include <QColor>
 #include <QFont>
 
+// Constants
+constexpr int CAPTURE_SIZE      = 11;
+constexpr int TOTAL_ZOOM_FACTOR = 16;
+constexpr int VIEW_SIZE         = CAPTURE_SIZE * TOTAL_ZOOM_FACTOR; // 176
+constexpr int SCALE_FACTOR      = 4;
+constexpr int RECT_X            = 18 * SCALE_FACTOR;
+constexpr int RECT_Y            = 18 * SCALE_FACTOR;
+constexpr int RECT_WIDTH        = 3  * SCALE_FACTOR;
+constexpr int RECT_HEIGHT       = 3  * SCALE_FACTOR;
+constexpr int OVERALL_WIDTH     = VIEW_SIZE * 2 + 40;
+constexpr int OVERALL_HEIGHT    = VIEW_SIZE + 140; // Increased height for extra spacing
+
 class MainWindow : public QMainWindow {
     Q_OBJECT
 public:
     MainWindow(QWidget *parent = nullptr) : QMainWindow(parent) {
-        scaleFactor = 4;
         liveViewLocked = false;
         
-        // Central widget and overall vertical layout.
+        // Central widget with overall vertical layout.
         QWidget* centralWidget = new QWidget(this);
         centralWidget->setFocusPolicy(Qt::StrongFocus);
         setCentralWidget(centralWidget);
@@ -33,28 +44,28 @@ public:
         mainLayout->setContentsMargins(10, 10, 10, 10);
         mainLayout->setSpacing(10);
         
-        // Create a horizontal layout for the color preview and live view.
+        // Top horizontal layout for the color preview and live view.
         QHBoxLayout* topLayout = new QHBoxLayout();
         topLayout->setSpacing(10);
         
-        // Color preview box
+        // Color preview box on the left.
         colorLabel = new QLabel(centralWidget);
-        const int captureSize = 11;
-        const int totalZoomFactor = 16;
-        int viewSize = captureSize * totalZoomFactor; // 176
-        colorLabel->setFixedSize(viewSize, viewSize);
+        colorLabel->setFixedSize(VIEW_SIZE, VIEW_SIZE);
         colorLabel->setStyleSheet("background-color: #000000;");
         topLayout->addWidget(colorLabel);
         
         // Live view image label.
         imageLabel = new QLabel(centralWidget);
-        imageLabel->setFixedSize(viewSize, viewSize);
+        imageLabel->setFixedSize(VIEW_SIZE, VIEW_SIZE);
         imageLabel->setAlignment(Qt::AlignCenter);
         topLayout->addWidget(imageLabel);
         
         mainLayout->addLayout(topLayout);
         
-        // Form layout for text boxes below the view.
+        // Extra spacing to ensure text fields don't overlap the view boxes.
+        mainLayout->addSpacing(VIEW_SIZE);
+        
+        // Form layout for text fields.
         QFormLayout* formLayout = new QFormLayout();
         QFont smallFont;
         smallFont.setPointSize(8);
@@ -82,12 +93,8 @@ public:
         
         mainLayout->addLayout(formLayout);
         
-        // Set overall window size (adjust margins as needed).
-        int overallWidth = viewSize * 2 + 40;
-        int overallHeight = viewSize + 120;
-        setFixedSize(overallWidth, overallHeight);
+        setFixedSize(OVERALL_WIDTH, OVERALL_HEIGHT);
         
-        // Timer to update the view.
         timer = new QTimer(this);
         connect(timer, &QTimer::timeout, this, &MainWindow::updateLiveView);
         timer->start(32);
@@ -129,41 +136,31 @@ protected:
 
 public slots:
     void updateLiveView() {
-        // Use locked position if enabled.
         QPoint capturePos = liveViewLocked ? lockedPos : QCursor::pos();
-        const int captureSize = 11;
-        int half = captureSize / 2;
+        int half = CAPTURE_SIZE / 2;
         int captureX = capturePos.x() - half;
         int captureY = capturePos.y() - half;
 
         QScreen *screen = QApplication::primaryScreen();
         if (!screen)
             return;
-        QPixmap capture = screen->grabWindow(0, captureX, captureY, captureSize, captureSize);
+        QPixmap capture = screen->grabWindow(0, captureX, captureY, CAPTURE_SIZE, CAPTURE_SIZE);
         
-        // Get center pixel's color.
         QImage captureImage = capture.toImage();
         QColor centerColor = captureImage.pixelColor(5, 5);
         
-        // Update the color preview box.
         colorLabel->setStyleSheet(QString("background-color: %1;").arg(centerColor.name()));
         
-        const int totalZoomFactor = 16;
-        QPixmap zoomed = capture.scaled(captureSize * totalZoomFactor,
-                                        captureSize * totalZoomFactor,
+        QPixmap zoomed = capture.scaled(VIEW_SIZE,
+                                        VIEW_SIZE,
                                         Qt::KeepAspectRatio,
                                         Qt::FastTransformation);
         QPainter painter(&zoomed);
         painter.setPen(Qt::red);
-        int rectX = 18 * scaleFactor;
-        int rectY = 18 * scaleFactor;
-        int rectWidth = 3 * scaleFactor;
-        int rectHeight = 3 * scaleFactor;
-        painter.drawRect(rectX, rectY, rectWidth, rectHeight);
+        painter.drawRect(RECT_X, RECT_Y, RECT_WIDTH, RECT_HEIGHT);
         
         imageLabel->setPixmap(zoomed);
         
-        // Update text fields.
         coordsLineEdit->setText(QString("X: %1, Y: %2").arg(capturePos.x()).arg(capturePos.y()));
         hexLineEdit->setText(centerColor.name().toUpper());
         rgbLineEdit->setText(QString("R: %1, G: %2, B: %3")
@@ -179,7 +176,6 @@ private:
     QLineEdit *hexLineEdit;
     QLineEdit *rgbLineEdit;
     QTimer *timer;
-    int scaleFactor;
     bool liveViewLocked;
     QPoint lockedPos;
 };
